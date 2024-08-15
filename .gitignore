@@ -361,3 +361,9 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+
+**/Assembly-CSharp.dll
+**/Assembly-CSharp-firstpass.dll
+**/HOOKS-Assembly-CSharp.dll
+**/PUBLIC-Assembly-CSharp.dll
