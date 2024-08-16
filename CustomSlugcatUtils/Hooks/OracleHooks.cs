@@ -6,6 +6,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
+using CustomSlugcatUtils.Tools;
 using HUD;
 using JetBrains.Annotations;
 using Mono.Cecil.Cil;
@@ -173,9 +174,10 @@ namespace CustomSlugcatUtils.Hooks
             if (!File.Exists(AssetManager.ResolveFilePath(path)))
             {
                 conversation.events.Add(new Conversation.TextEvent(conversation, 0, $"Can't find conversation file At {path}", 200));
+                Plugin.LogError("Custom Oracle No file Error", $"Can't find conversation file At {path}");
                 return;
             }
-            var lines = File.ReadAllLines(AssetManager.ResolveFilePath(path)).Where(i => !string.IsNullOrWhiteSpace(i));
+            var lines = File.ReadAllLines(AssetManager.ResolveFilePath(path)).Where(i => !string.IsNullOrWhiteSpace(i)).ToArray();
 
             var igt = conversation.interfaceOwner.rainWorld.inGameTranslator;
 
@@ -184,43 +186,51 @@ namespace CustomSlugcatUtils.Hooks
                 bool currentCondition = true;
                 bool lastCondition = true;
                 bool inCondition = false;
-                foreach (var rawLine in lines)
+                for (int i = 0; i<lines.Length ;i++)
                 {
-                    var line = rawLine.Trim();
-                    var split = line.Split('|');
-                    if (split[0] == "IF")
+                    var line = lines[i].Trim();
+                    try
                     {
-                        if (inCondition)
-                            Plugin.LogError("Custom Oracle", "!!!!USE CONDITION WITHIN CONDITION!!!");
+                        var split = line.Split('|');
+                        if (split[0] == "IF")
+                        {
+                            if (inCondition)
+                                Plugin.LogError("Custom Oracle", "!!!!USE CONDITION WITHIN CONDITION!!!");
 
-                        LoadCondition(split, out currentCondition);
-                        lastCondition = currentCondition;
-                        inCondition = true;
+                            LoadCondition(split, i, fileName, out currentCondition);
+                            lastCondition = currentCondition;
+                            inCondition = true;
 
-                    }
-                    else if (split[0] == "ELSE")
-                    {
-                        if (!inCondition)
-                            Plugin.LogError("Custom Oracle", "!!!!USE ELSE WITHOUT CONDITION!!!");
-                        if (lastCondition)
-                            currentCondition = false;
-                        else if (split.Length > 1)
-                            LoadCondition(split, out currentCondition);
-                        else
+                        }
+                        else if (split[0] == "ELSE")
+                        {
+                            if (!inCondition)
+                                Plugin.LogError("Custom Oracle", "!!!!USE ELSE WITHOUT CONDITION!!!");
+                            if (lastCondition)
+                                currentCondition = false;
+                            else if (split.Length > 1)
+                                LoadCondition(split, i, fileName, out currentCondition);
+                            else
+                                currentCondition = true;
+                            lastCondition |= currentCondition;
+                        }
+                        else if (split[0] == "END")
+                        {
+                            lastCondition = false;
                             currentCondition = true;
-                        lastCondition |= currentCondition;
+                            inCondition = false;
+                        }
+                        else if (currentCondition)
+                        {
+                            LoadSingleLine(conversation, split, igt);
+                        }
                     }
-                    else if (split[0] == "END")
+                    catch (Exception e)
                     {
-                        lastCondition = false;
-                        currentCondition = true;
-                        inCondition = false;
+                        Debug.LogException(e);
+                        ErrorTracker.TrackError("Custom Oracle Format Error", $"At File:{fileName}, line:{i}\n{line}");
                     }
-                    else if (currentCondition)
-                    {
-                        Plugin.Log(line);
-                        LoadSingleLine(conversation, split, igt);
-                    }
+
                 }
             }
             else
@@ -230,9 +240,9 @@ namespace CustomSlugcatUtils.Hooks
                 if (index > 0)
                     randomConv = index;
                 int currentConv = 0;
-                foreach (var rawLine in lines)
+                for (int i = 0; i < lines.Length; i++)
                 {
-                    var line = rawLine.Trim();
+                    var line = lines[i].Trim();
                     if (line[0] == randomStartPos.Value)
                     {
                         currentConv++;
@@ -242,8 +252,15 @@ namespace CustomSlugcatUtils.Hooks
                         var split = line.Split('|');
                         if (split.Length != 2 && split[0][0] == randomStartPos.Value)
                             split[0] = split[0].Substring(1);
-
-                        LoadSingleLine(conversation, split, igt);
+                        try
+                        {
+                            LoadSingleLine(conversation, split, igt);
+                        }
+                        catch (Exception e)
+                        {
+                            Debug.LogException(e);
+                            ErrorTracker.TrackError("Custom Oracle Format Error", $"Format Error At File:{fileName}, line:{i}\n{line}");
+                        }
                     }
                 }
             }
@@ -265,7 +282,9 @@ namespace CustomSlugcatUtils.Hooks
                 box.NewMessage($"Can't find dialog file At {path}", 200);;
                 return;
             }
-            var lines = File.ReadAllLines(AssetManager.ResolveFilePath(path)).Where(i => !string.IsNullOrWhiteSpace(i));
+
+            var lines = File.ReadAllLines(AssetManager.ResolveFilePath(path)).Where(i => !string.IsNullOrWhiteSpace(i))
+                .ToArray();
 
             var igt = box.hud.rainWorld.inGameTranslator;
 
@@ -276,16 +295,16 @@ namespace CustomSlugcatUtils.Hooks
                 bool currentCondition = true;
                 bool lastCondition = true;
                 bool inCondition = false;
-                foreach (var rawLine in lines)
+                for (int i = 0;i < lines.Length; i++)
                 {
-                    var line = rawLine.Trim();
+                    var line = lines[i].Trim();
                     var split = line.Split('|');
                     if (split[0] == "IF")
                     {
                         if (inCondition)
                             Plugin.LogError("Custom Oracle", "!!!!USE CONDITION WITHIN CONDITION!!!");
 
-                        LoadCondition(split, out currentCondition);
+                        LoadCondition(split, i, fileName, out currentCondition);
                         lastCondition = currentCondition;
                         inCondition = true;
 
@@ -297,7 +316,7 @@ namespace CustomSlugcatUtils.Hooks
                         if (lastCondition)
                             currentCondition = false;
                         else if (split.Length > 1)
-                            LoadCondition(split, out currentCondition);
+                            LoadCondition(split, i, fileName, out currentCondition);
                         else
                             currentCondition = true;
                         lastCondition |= currentCondition;
@@ -310,15 +329,22 @@ namespace CustomSlugcatUtils.Hooks
                     }
                     else if (currentCondition)
                     {
-                        Plugin.Log(line);
-                        var extraLinger = split.Length == 1 ? 0 : int.Parse(split[2]);
-                        if (isFirst)
+                        try
                         {
-                            box.Interrupt(igt.Translate(split[0]), extraLinger);
-                            isFirst = false;
+                            var extraLinger = split.Length == 1 ? 0 : int.Parse(split[2]);
+                            if (isFirst)
+                            {
+                                box.Interrupt(igt.Translate(split[0]), extraLinger);
+                                isFirst = false;
+                            }
+                            else
+                                box.NewMessage(igt.Translate(split[0]), extraLinger);
                         }
-                        else
-                            box.NewMessage(igt.Translate(split[0]), extraLinger);
+                        catch (Exception e)
+                        {
+                            Debug.LogException(e);
+                            ErrorTracker.TrackError("Custom Oracle Format Error", $"At File:{fileName}, line:{i}\n{line}");
+                        }
                     }
                 }
             }
@@ -329,26 +355,34 @@ namespace CustomSlugcatUtils.Hooks
                 if (index > 0)
                     randomConv = index;
                 int currentConv = 0;
-                foreach (var rawLine in lines)
+                for (int i = 0; i < lines.Length; i++)
                 {
-                    var line = rawLine.Trim();
+                    var line = lines[i].Trim();
                     if (line[0] == randomStartPos.Value)
                     {
                         currentConv++;
                     }
                     if (currentConv == randomConv)
                     {
-                        var split = line.Split('|');
-                        if (split.Length != 2 && split[0][0] == randomStartPos.Value)
-                            split[0] = split[0].Substring(1);
-                        var extraLinger = split.Length == 1 ? 0 : int.Parse(split[2]);
-                        if (isFirst)
+                        try
                         {
-                            box.Interrupt(igt.Translate(split[0]), extraLinger);
-                            isFirst = false;
+                            var split = line.Split('|');
+                            if (split.Length != 2 && split[0][0] == randomStartPos.Value)
+                                split[0] = split[0].Substring(1);
+                            var extraLinger = split.Length == 1 ? 0 : int.Parse(split[2]);
+                            if (isFirst)
+                            {
+                                box.Interrupt(igt.Translate(split[0]), extraLinger);
+                                isFirst = false;
+                            }
+                            else
+                                box.NewMessage(igt.Translate(split[0]), extraLinger);
                         }
-                        else
-                            box.NewMessage(igt.Translate(split[0]), extraLinger);
+                        catch (Exception e)
+                        {
+                            Debug.LogException(e);
+                            ErrorTracker.TrackError("Custom Oracle Format Error", $"At File:{fileName}, line:{i}\n{line}");
+                        }
                     }
                 }
             }
@@ -361,11 +395,19 @@ namespace CustomSlugcatUtils.Hooks
             var conArgs = con.Split(' ');
             if (!RegistCondition.ContainsKey(conArgs[0]))
             {
-                Plugin.LogError("Custom Oracle", $"!!! UNKNOWN CONDITION NAME : {conArgs[0]} !!!");
+                Plugin.LogError("Custom Oracle Condition Error", $"Unknown condition name : {conArgs[0]}");
                 return false;
             }
             if (Custom.rainWorld.processManager.currentMainLoop is RainWorldGame game)
-                return RegistCondition[conArgs[0]].Invoke(game, conArgs.Length > 1 ? conArgs.Skip(1).ToArray() : Array.Empty<string>());
+                try
+                {
+                    return RegistCondition[conArgs[0]].Invoke(game, conArgs.Length > 1 ? conArgs.Skip(1).ToArray() : Array.Empty<string>());
+                }
+                catch (Exception e)
+                {
+                    Debug.LogException(e);
+                    ErrorTracker.TrackError("Custom Oracle Condition Error", $"Name:{conArgs[0]}\n{e}");
+                }
             return false;
 
         }
@@ -387,37 +429,47 @@ namespace CustomSlugcatUtils.Hooks
             if (split[0] == "SP")
                 conversation.events.Add(new CustomSpecialEvent(conversation, 0, split[1], split.Length > 2 ? split.Skip(2).ToArray() : Array.Empty<string>()));
             else if (split.Length == 2 && split[0] == "WAIT")
-                conversation.events.Add(new Conversation.WaitEvent(conversation, int.Parse(split[1])));
+                conversation.events.Add(new WaitEvent(conversation, int.Parse(split[1])));
             else if (split.Length == 3)
-                conversation.events.Add(new Conversation.TextEvent(conversation, int.Parse(split[1]),
+                conversation.events.Add(new TextEvent(conversation, int.Parse(split[1]),
                     igt.Translate(split[0]), int.Parse(split[2])));
             else
-                conversation.events.Add(new Conversation.TextEvent(conversation, 0,
+                conversation.events.Add(new TextEvent(conversation, 0,
                     igt.Translate(split[0]), 0));
         }
-        private static void LoadCondition(string[] split, out bool currentCondition)
+        private static void LoadCondition(string[] split,int line, string file, out bool currentCondition)
         {
-            if (split.Length > 2)
+            try
             {
-                Func<bool, bool, bool> combFunc;
-                if (split[1] == "&")
+                if (split.Length > 2)
                 {
-                    combFunc = (a, b) => a && b;
-                    currentCondition = true;
+                    Func<bool, bool, bool> combFunc;
+                    if (split[1] == "&")
+                    {
+                        combFunc = (a, b) => a && b;
+                        currentCondition = true;
+                    }
+                    else
+                    {
+                        combFunc = (a, b) => a || b;
+                        currentCondition = false;
+                    }
+
+                    for (int i = 2; i < split.Length; i++)
+                        currentCondition = combFunc(currentCondition, GetCondition(split[i]));
                 }
                 else
                 {
-                    combFunc = (a, b) => a || b;
-                    currentCondition = false;
+                    currentCondition = GetCondition(split[1]);
                 }
-
-                for (int i = 2; i < split.Length; i++)
-                    currentCondition = combFunc(currentCondition, GetCondition(split[i]));
             }
-            else
+            catch (Exception e)
             {
-                currentCondition = GetCondition(split[1]);
+                Debug.LogException(e);
+                ErrorTracker.TrackError("Custom Oracle", $"Condition Format Error At FileName:{file}, line:{line}");
+                currentCondition = false;
             }
+
         }
     }
 
@@ -477,49 +529,58 @@ namespace CustomSlugcatUtils.Hooks
 
         private static void CustomOracle_OnEventTrigger(IOwnAConversation owner, CustomSpecialEvent eventData)
         {
-            if (owner is SSOracleBehavior ss)
+            try
             {
-                switch (eventData.eventName)
+                if (owner is SSOracleBehavior ss)
                 {
-                    case "gravity":
-                        ss.oracle.gravity = int.Parse(eventData.args[0]);
-                        break;
-                    case "locked":
-                        ss.LockShortcuts();
-                        break;
-                    case "unlocked":
-                        ss.UnlockShortcuts();
-                        break;
-                    case "work":
-                        ss.getToWorking = int.Parse(eventData.args[0]);
-                        break;
-                    case "behavior":
-                        if(ExtEnumBase.TryParse(typeof(SSOracleBehavior.MovementBehavior), eventData.args[0],true,out var re))
-                            ss.movementBehavior = (SSOracleBehavior.MovementBehavior)re;
-                        else
-                            Plugin.LogError("Custom Oracle",$"Unknown movement behavior:{eventData.args[0]}");
-                        break;
-                    case "sound":
-                        if (ExtEnumBase.TryParse(typeof(SoundID), eventData.args[0], true, out var soundId))
-                        {
-                            if (eventData.args.Length == 3)
-                                ss.oracle.room.PlaySound((SoundID)soundId, ss.oracle.firstChunk, false,
-                                    float.Parse(eventData.args[1]), float.Parse(eventData.args[2]));
+                    switch (eventData.eventName)
+                    {
+                        case "gravity":
+                            ss.oracle.gravity = int.Parse(eventData.args[0]);
+                            break;
+                        case "locked":
+                            ss.LockShortcuts();
+                            break;
+                        case "unlocked":
+                            ss.UnlockShortcuts();
+                            break;
+                        case "work":
+                            ss.getToWorking = int.Parse(eventData.args[0]);
+                            break;
+                        case "behavior":
+                            if (ExtEnumBase.TryParse(typeof(SSOracleBehavior.MovementBehavior), eventData.args[0], true, out var re))
+                                ss.movementBehavior = (SSOracleBehavior.MovementBehavior)re;
                             else
-                                ss.oracle.room.PlaySound((SoundID)soundId, ss.oracle.firstChunk);
-                            
-                        }
-                        else
-                            Plugin.LogError("Custom Oracle", $"Unknown sound Id:{eventData.args[0]}");
-                        break;
-                    case "turnOff":
-                        ss.TurnOffSSMusic(eventData.args.Length == 0 || bool.Parse(eventData.args[0]));
-                        break;
-                    case "move":
-                        ss.SetNewDestination(new Vector2(float.Parse(eventData.args[0]), float.Parse(eventData.args[1])));
-                        break;
+                                Plugin.LogError("Custom Oracle", $"Unknown movement behavior:{eventData.args[0]}");
+                            break;
+                        case "sound":
+                            if (ExtEnumBase.TryParse(typeof(SoundID), eventData.args[0], true, out var soundId))
+                            {
+                                if (eventData.args.Length == 3)
+                                    ss.oracle.room.PlaySound((SoundID)soundId, ss.oracle.firstChunk, false,
+                                        float.Parse(eventData.args[1]), float.Parse(eventData.args[2]));
+                                else
+                                    ss.oracle.room.PlaySound((SoundID)soundId, ss.oracle.firstChunk);
+
+                            }
+                            else
+                                Plugin.LogError("Custom Oracle", $"Unknown sound Id:{eventData.args[0]}");
+                            break;
+                        case "turnOff":
+                            ss.TurnOffSSMusic(eventData.args.Length == 0 || bool.Parse(eventData.args[0]));
+                            break;
+                        case "move":
+                            ss.SetNewDestination(new Vector2(float.Parse(eventData.args[0]), float.Parse(eventData.args[1])));
+                            break;
+                    }
                 }
             }
+            catch (Exception e)
+            {
+                Debug.LogException(e);
+                ErrorTracker.TrackError(e, "Custom Oracle: Special Event Error", $"At: {eventData.eventName}\n{e}");
+            }
+           
 
         }
 
@@ -912,6 +973,7 @@ namespace CustomSlugcatUtils.Hooks
                         catch (Exception e)
                         {
                             Debug.LogException(e);
+                            Plugin.LogError("Custom Oracle Json Error", $"File: {info.Name}\n{e}");
                         }
                     }
                 }

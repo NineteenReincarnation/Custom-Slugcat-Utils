@@ -4,6 +4,8 @@ using CustomSlugcatUtils.Hooks;
 using UnityEngine;
 
 using System.Security.Permissions;
+using CustomSlugcatUtils.Tools;
+
 #pragma warning disable CS0618
 [assembly: SecurityPermission(SecurityAction.RequestMinimum, SkipVerification = true)]
 #pragma warning restore CS0618
@@ -36,6 +38,7 @@ namespace CustomSlugcatUtils
             {
                 if (!isLoaded)
                 {
+                    StartCoroutine(ErrorTracker.LateCreateExceptionTracker());
                     SessionHooks.OnModsInit();
                     DevToolsHooks.OnModsInit();
                     CraftHooks.OnModsInit();
@@ -48,6 +51,7 @@ namespace CustomSlugcatUtils
             }
             catch (Exception e)
             {
+                ErrorTracker.TrackError(e, "Custom Slugcat Utils OnModsInit Failed!");
                 Debug.LogException(e);
             }
         }
@@ -69,6 +73,7 @@ namespace CustomSlugcatUtils
             }
             catch (Exception e)
             {
+                ErrorTracker.TrackError(e, "Custom Slugcat Utils PostModsInit Failed!");
                 Debug.LogException(e);
             }
             try
@@ -91,10 +96,6 @@ namespace CustomSlugcatUtils
         }
 
 
-        public static void LogError(object m)
-        {
-            Debug.LogError($"[Custom Slugcat Utils] {m}");
-        }
 
         public static void Log(object header, object m)
         {
@@ -105,6 +106,12 @@ namespace CustomSlugcatUtils
         public static void LogError(object header, object m)
         {
             Debug.LogError($"[Custom Slugcat Utils - {header}] {m}");
+            ErrorTracker.TrackError(header.ToString(),m.ToString());
+        }
+
+        public void Update()
+        {
+            ErrorTracker.Instance?.Update();
         }
     }
 }

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using CustomSlugcatUtils.Tools;
 using HUD;
 using Menu;
 using Mono.Cecil.Cil;
@@ -53,7 +54,7 @@ namespace CustomSlugcatUtils.Hooks
             catch (Exception e)
             {
                 Debug.LogException(e);
-                Plugin.LogError("IL Hook for SlugcatPage.AddImage Failed!");
+                ErrorTracker.TrackError(e, "IL Hook for SlugcatPage.AddImage Failed!");
             }
 
             new Hook(

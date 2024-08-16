@@ -6,6 +6,7 @@ using System.Runtime.Serialization;
 using System.Text;
 using System.Threading.Tasks;
 using System.Xml.Schema;
+using CustomSlugcatUtils.Tools;
 using Mono.Cecil.Cil;
 using MonoMod.Cil;
 using MoreSlugcats;
@@ -79,7 +80,7 @@ namespace CustomSlugcatUtils.Hooks
             catch (Exception e)
             {
                 Debug.LogException(e);
-                Plugin.LogError("IL Hook for Player.GrabUpdate Failed!");
+                ErrorTracker.TrackError(e, "IL Hook for Player.GrabUpdate Failed!");
             }
         }
 

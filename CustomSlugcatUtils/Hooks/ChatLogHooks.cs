@@ -26,7 +26,7 @@ namespace CustomSlugcatUtils.Hooks
 
                     if (PathMaps.Any(i => i.Key.value == chatData.Name))
                     {
-                        Plugin.LogError($"Already contains ChatLogID : {chatData.Name}");
+                        Plugin.LogError("Custom Chatlog",$"Already contains ChatLogID : {chatData.Name}");
                         continue;
                     }
                     Plugin.Log($"Add custom chatlog: ID:{chatData.Name}, Path:{chatData.FullName}");
@@ -73,8 +73,7 @@ namespace CustomSlugcatUtils.Hooks
                     }
                     catch
                     {
-                        Plugin.LogError(chatLog[i].Substring(2, 6));
-                        // ignored
+                        Plugin.LogError("Custom Chatlog Format Error",$"Unexpected Color format {chatLog[i].Substring(2, 6)}");
                     }
                 }
 
@@ -103,7 +102,10 @@ namespace CustomSlugcatUtils.Hooks
                 if (!File.Exists(AssetManager.ResolveFilePath(path)))
                     path = $"{dirPath}/{LocalizationTranslator.LangShort(InGameTranslator.LanguageID.English)}.txt";
                 if (!File.Exists(AssetManager.ResolveFilePath(path)))
+                {
+                    Plugin.LogError("Custom Chatlog No file Error", $"Can't find chatlog file At {dirPath}");
                     return new[] { $"Can't find file at {dirPath} folder" };
+                }
 
                 var lines = File.ReadAllLines(AssetManager.ResolveFilePath(path));
                 return lines;

@@ -247,11 +247,19 @@ namespace CustomSlugcatUtils.Hooks
                 currentName = dir.Name.Replace("skin_", "");
                 foreach (var file in dir.GetFiles("*.txt"))
                 {
-                    if (File.Exists(file.FullName.Replace("txt", "png")) ||
-                        File.Exists(file.FullName.Replace("txt", "PNG")))
+                    try
                     {
-                        Futile.atlasManager.LoadAtlas(Path.Combine("atlas", dir.Name, file.Name.Replace(".txt", "")));
-                        Plugin.Log($"Load {file} for ID:{currentName}");
+                        if (File.Exists(file.FullName.Replace("txt", "png")) ||
+                            File.Exists(file.FullName.Replace("txt", "PNG")))
+                        {
+                            Futile.atlasManager.LoadAtlas(Path.Combine("atlas", dir.Name, file.Name.Replace(".txt", "")));
+                            Plugin.Log("Custom Skin",$"Load {file} for ID:{currentName}");
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        Debug.LogException(e);
+                        Plugin.LogError("Custom Skin", $"Try load atlas at:{file.FullName} failed!\n{e}");
                     }
                 }
 
