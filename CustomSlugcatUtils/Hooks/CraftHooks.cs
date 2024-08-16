@@ -60,9 +60,11 @@ namespace CustomSlugcatUtils.Hooks
 
         private static IconSymbol.IconSymbolData ToCraftItemData(JsonObject json)
         {
-            var re = new IconSymbol.IconSymbolData();
-            re.critType = CreatureTemplate.Type.StandardGroundCreature;
-            re.itemType = JsonUtils.ToExtEnum<AbstractPhysicalObject.AbstractObjectType>(json.Get("type"));
+            var re = new IconSymbol.IconSymbolData
+            {
+                critType = CreatureTemplate.Type.StandardGroundCreature,
+                itemType = JsonUtils.ToExtEnum<AbstractPhysicalObject.AbstractObjectType>(json.Get("type"))
+            };
             if (json.TryGet("data") is { } data)
                 re.intData = data.AsInt();
             return re;

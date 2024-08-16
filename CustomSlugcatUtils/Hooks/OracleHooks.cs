@@ -74,9 +74,7 @@ namespace CustomSlugcatUtils.Hooks
             base.Update();
             if (owner.oracle.room.game.cameras.All(i => i.room != owner.oracle.room))
             {
-                owner.NewAction(SSOracleBehavior.Action.General_Idle);
-                Plugin.Log("Custom Oracle", $"Switch to idle because player left");
-
+                return;
             }
             if (requestNewConv)
             {
@@ -177,7 +175,10 @@ namespace CustomSlugcatUtils.Hooks
                 Plugin.LogError("Custom Oracle No file Error", $"Can't find conversation file At {path}");
                 return;
             }
-            var lines = File.ReadAllLines(AssetManager.ResolveFilePath(path)).Where(i => !string.IsNullOrWhiteSpace(i)).ToArray();
+
+            var lines = File.ReadAllLines(AssetManager.ResolveFilePath(path))
+                .Select(i => i.Substring(0, i.IndexOf("//") == -1 ? i.Length : i.IndexOf("//"))).
+                Where(i => !string.IsNullOrWhiteSpace(i)).ToArray();
 
             var igt = conversation.interfaceOwner.rainWorld.inGameTranslator;
 
@@ -189,6 +190,8 @@ namespace CustomSlugcatUtils.Hooks
                 for (int i = 0; i<lines.Length ;i++)
                 {
                     var line = lines[i].Trim();
+                    Plugin.LogDebug($"{folderName}-{fileName}: {line}");
+                  
                     try
                     {
                         var split = line.Split('|');
@@ -249,6 +252,7 @@ namespace CustomSlugcatUtils.Hooks
                     }
                     if (currentConv == randomConv)
                     {
+                        Plugin.LogDebug($"{folderName}-{fileName}: {line}");
                         var split = line.Split('|');
                         if (split.Length != 2 && split[0][0] == randomStartPos.Value)
                             split[0] = split[0].Substring(1);
@@ -283,8 +287,9 @@ namespace CustomSlugcatUtils.Hooks
                 return;
             }
 
-            var lines = File.ReadAllLines(AssetManager.ResolveFilePath(path)).Where(i => !string.IsNullOrWhiteSpace(i))
-                .ToArray();
+            var lines = File.ReadAllLines(AssetManager.ResolveFilePath(path))
+                .Select(i => i.Substring(0, i.IndexOf("//") == -1 ? i.Length : i.IndexOf("//"))).
+                Where(i => !string.IsNullOrWhiteSpace(i)).ToArray();
 
             var igt = box.hud.rainWorld.inGameTranslator;
 
@@ -299,6 +304,8 @@ namespace CustomSlugcatUtils.Hooks
                 {
                     var line = lines[i].Trim();
                     var split = line.Split('|');
+                    Plugin.LogDebug($"{folderName}-{fileName}: {line}");
+
                     if (split[0] == "IF")
                     {
                         if (inCondition)
@@ -366,6 +373,7 @@ namespace CustomSlugcatUtils.Hooks
                     {
                         try
                         {
+                            Plugin.LogDebug($"{folderName}-{fileName}: {line}");
                             var split = line.Split('|');
                             if (split.Length != 2 && split[0][0] == randomStartPos.Value)
                                 split[0] = split[0].Substring(1);

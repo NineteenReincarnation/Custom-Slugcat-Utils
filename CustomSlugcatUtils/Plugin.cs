@@ -95,7 +95,10 @@ namespace CustomSlugcatUtils
             Debug.Log($"[Custom Slugcat Utils] {m}");
         }
 
-
+        public static void LogDebug(object m)
+        {
+            Debug.Log($"[Custom Slugcat Utils] {m}");
+        }
 
         public static void Log(object header, object m)
         {

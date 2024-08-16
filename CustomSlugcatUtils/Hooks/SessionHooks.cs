@@ -12,7 +12,7 @@ namespace CustomSlugcatUtils.Hooks
     internal static class SessionHooks
     {
 
-        private static readonly GameFeature<Color> PlayerGuideColor = new("guide_overseer_color", JsonUtils.ToColor);
+        private static readonly GameFeature<Color> PlayerGuideColor = new("guide_overseer_color",JsonUtils.ToColor);
 
         private static readonly GameFeature<string[]> StoryRegionPriority = new("guide_region_priority", JsonUtils.ToStrings);
 
