@@ -103,7 +103,7 @@ namespace CustomSlugcatUtils.Hooks
             if (CycleLimit.TryGet(self,out var cycleLimit) &&
                 self.session is StoryGameSession session)
             {
-                if (session.saveState.cycleNumber >= cycleLimit && CycleLimitForce.TryGet(self,out var force) && force)
+                if (session.saveState.cycleNumber >= cycleLimit && CycleLimitForce.TryGet(self,out var force) && force && !self.rainWorld.ExpeditionMode)
                 {
                     self.GoToRedsGameOver();
                     return;
@@ -139,7 +139,7 @@ namespace CustomSlugcatUtils.Hooks
 
         private static void RainWorldGame_GoToRedsGameOver(On.RainWorldGame.orig_GoToRedsGameOver orig, RainWorldGame self)
         {
-            if (CycleLimit.TryGet(self, out _))
+            if (CycleLimit.TryGet(self, out _) && !self.rainWorld.ExpeditionMode)
             {
                 if (self.manager.upcomingProcess != null) return;
 

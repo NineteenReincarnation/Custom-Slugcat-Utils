@@ -8,10 +8,16 @@ using SlugBase;
 using SlugBase.Features;
 using UnityEngine;
 using UnityEngine.Diagnostics;
+using static CustomSlugcatUtils.Hooks.CustomEdibleHooks;
 
 namespace CustomSlugcatUtils.Hooks
 {
+    internal class CustomType
+    {
+        public AbstractPhysicalObject.AbstractObjectType objType = AbstractPhysicalObject.AbstractObjectType.Creature;
+        public CreatureTemplate.Type critType = CreatureTemplate.Type.StandardGroundCreature;
 
+    }
 
 
     internal static class CustomEdibleHooks
@@ -32,13 +38,13 @@ namespace CustomSlugcatUtils.Hooks
                             if (obj.TryGet("food_point") is { } food && food.TryFloat() is { } toFood)
                                 foodPoint = toFood;
                             re.edibleDatas.Add(new CustomEdibleData.FoodData(
-                                JsonUtils.ToExtEnum<AbstractPhysicalObject.AbstractObjectType>(any),
+                                ToCustomType(any),
                                 Mathf.FloorToInt(foodPoint), Mathf.FloorToInt((foodPoint - Mathf.FloorToInt(foodPoint)) * 4)));
                         }
                         else if (obj.TryGet("forbiddenType") is { } any2)
                         {
                             re.edibleDatas.Add(new CustomEdibleData.FoodData(
-                                JsonUtils.ToExtEnum<AbstractPhysicalObject.AbstractObjectType>(any2), -1, -1));
+                                ToCustomType(any2), -1, -1));
                         }
                     }
                 }
@@ -47,6 +53,28 @@ namespace CustomSlugcatUtils.Hooks
 
             });
 
+
+
+      
+
+        public static CustomType ToCustomType(JsonAny any)
+        {
+            var re = new CustomType();
+            var str = any.AsString();
+            if (ExtEnumBase.TryParse(typeof(AbstractPhysicalObject.AbstractObjectType), str, true, out var objType))
+                re.objType = (AbstractPhysicalObject.AbstractObjectType)objType;
+            else
+                re.critType = new CreatureTemplate.Type(str);
+            return re;
+        }
+
+        public static bool IsSame(CustomType type, PhysicalObject obj)
+        {
+            if (type == null)
+                return false;
+            return (obj is Creature creature && creature.Template.type == type.critType) ||
+                 (obj is not Creature && obj.abstractPhysicalObject.type == type.objType);
+        }
         public static void OnModInit()
         {
             IL.Player.GrabUpdate += Player_GrabUpdate_EdibleIL;
@@ -77,7 +105,7 @@ namespace CustomSlugcatUtils.Hooks
                 c.EmitDelegate<Func<Player, int, bool>>((self, index) =>
                 {
                     if (CustomEdibles.TryGet(self, out var data) &&
-                        data.edibleDatas.Any(i => i.forbidType == self.grasps[index].grabbed.abstractPhysicalObject.type))
+                        data.edibleDatas.Any(i => IsSame(i.forbidType, self.grasps[index].grabbed)))
                         return false;
                     return true;
                 });
@@ -105,7 +133,7 @@ namespace CustomSlugcatUtils.Hooks
             if (grasp != null)
             {
                 if (data.edibleDatas.
-                    Any(i => i.edibleType == grasp.grabbed.abstractPhysicalObject.type))
+                    Any(i => IsSame(i.edibleType, grasp.grabbed)))
                     return true;
             }
 
@@ -120,10 +148,10 @@ namespace CustomSlugcatUtils.Hooks
                 for (int i = 0; i < 2; i++)
                 {
                     if (self.grasps[i] != null && customEdibleData.edibleDatas.
-                            Any(d => d.edibleType == self.grasps[i].grabbed.abstractPhysicalObject.type))
+                            Any(d => IsSame(d.edibleType, self.grasps[i].grabbed)))
                     {
                         var data = customEdibleData.edibleDatas.
-                            First(d => d.edibleType == self.grasps[i].grabbed.abstractPhysicalObject.type);
+                            First(d => IsSame(d.edibleType, self.grasps[i].grabbed));
                         if (self.SessionRecord != null)
                         {
                             self.SessionRecord.AddEat(self.grasps[i].grabbed);
@@ -141,7 +169,7 @@ namespace CustomSlugcatUtils.Hooks
         }
 
     }
-    public class CustomEdibleData
+    internal class CustomEdibleData
     {
 
         public readonly List<FoodData> edibleDatas = new();
@@ -149,8 +177,8 @@ namespace CustomSlugcatUtils.Hooks
 
         public class FoodData
         {
-            public AbstractPhysicalObject.AbstractObjectType edibleType;
-            public AbstractPhysicalObject.AbstractObjectType forbidType;
+            public CustomType edibleType;
+            public CustomType forbidType;
             public int food;
             public int qFood;
 
@@ -162,7 +190,7 @@ namespace CustomSlugcatUtils.Hooks
             /// <param name="edibleType">可食用的物体类型</param>
             /// <param name="food">食用回复的整数饱食度</param>
             /// <param name="quarterFood">食用回复的小数饱食度(1/4格)</param>
-            public FoodData(AbstractPhysicalObject.AbstractObjectType edibleType, int food, int quarterFood)
+            public FoodData(CustomType edibleType, int food, int quarterFood)
             {
                 if (food < 0)
                 {

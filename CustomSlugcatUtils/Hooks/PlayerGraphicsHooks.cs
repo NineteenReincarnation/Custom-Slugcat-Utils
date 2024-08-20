@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using RWCustom;
 using UnityEngine;
@@ -18,7 +19,35 @@ namespace CustomSlugcatUtils.Hooks
             On.PlayerGraphics.ctor += PlayerGraphics_ctor;
             On.PlayerGraphics.DrawSprites += PlayerGraphics_DrawSprites;
             On.PlayerGraphics.InitiateSprites += PlayerGraphics_InitiateSprites;
+
+            On.Menu.MainMenu.ctor += MainMenu_ctor;
             Plugin.Log("Skin Hooks Loaded");
+        }
+
+        private static bool postPostLoaded;
+        private static void MainMenu_ctor(On.Menu.MainMenu.orig_ctor orig, Menu.MainMenu self, ProcessManager manager, bool showRegionSpecificBkg)
+        {
+            orig(self, manager, showRegionSpecificBkg);
+            if (!postPostLoaded)
+            {
+                On.RoomCamera.SpriteLeaser.Update += SpriteLeaser_Update;
+                postPostLoaded = true;
+                Plugin.Log("Post-Skin Hooks Loaded");
+            }
+
+        }
+
+        private static void SpriteLeaser_Update(On.RoomCamera.SpriteLeaser.orig_Update orig, RoomCamera.SpriteLeaser self, float timeStacker, RoomCamera rCam, Vector2 camPos)
+        {
+            orig(self,timeStacker,rCam,camPos);
+            if (self.drawableObject is PlayerGraphics graphics)
+            {
+                if (modules.TryGetValue(graphics, out var _))
+                {
+                    if (self.sprites[11].element.name != "pixel")
+                        self.sprites[11].scale = 1;
+                }
+            }
         }
 
         private static void PlayerGraphics_ctor(On.PlayerGraphics.orig_ctor orig, PlayerGraphics self,
@@ -105,6 +134,9 @@ namespace CustomSlugcatUtils.Hooks
                     .Replace("PFace", "Face").Replace("HeadC", "HeadA")
                     .Replace("HeadD", "HeadB");
                 var sprite = sLeaser.sprites[i];
+
+                if (i == 11 && !str.StartsWith("pixel"))
+                    sprite.scale = 1;
                 sprite.color = Color.white;
                 if (str.StartsWith("PlayerArm") ||
                     str.StartsWith("Face") ||
@@ -115,7 +147,7 @@ namespace CustomSlugcatUtils.Hooks
                     str.StartsWith("OnTopOfTerrainHand") ||
                     str.StartsWith("pixel"))
                 {
-                    if(str.StartsWith("pixel") && i != 10)
+                    if(str.StartsWith("pixel") && i != 11)
                         continue;
 
                     UpdateSprite(str, sprite, i, moveDeg, self);
@@ -198,6 +230,9 @@ namespace CustomSlugcatUtils.Hooks
                 case 9 or 3 or 4:
                     complexName = (sprite.scaleX < 0 ? "Left" : "Right") + name;
                     break;
+                case 11:
+                    complexName = name;
+                    break;
                 default:
                     {
                         if (self.player.bodyMode == Player.BodyModeIndex.Stand)
@@ -220,10 +255,18 @@ namespace CustomSlugcatUtils.Hooks
             }
 
             if (Futile.atlasManager.DoesContainElementWithName(self.player.slugcatStats.name + complexName))
+            {
                 sprite.element = Futile.atlasManager.GetElementWithName(self.player.slugcatStats.name + complexName);
+                if (name == "pixel")
+                    sprite.scale = 1;
+            }
 
             else if (Futile.atlasManager.DoesContainElementWithName(self.player.slugcatStats.name + name))
+            {
                 sprite.element = Futile.atlasManager.GetElementWithName(self.player.slugcatStats.name + name);
+                if (name == "pixel")
+                    sprite.scale = 1;
+            }
 
 
         }
@@ -238,32 +281,35 @@ namespace CustomSlugcatUtils.Hooks
     {
         private static void LoadAssets()
         {
-            if (!Directory.Exists(AssetManager.ResolveDirectory("atlas")))
-                return;
             On.FAtlasManager.AddAtlas += FAtlasManager_AddAtlas;
-
-            foreach (var dir in new DirectoryInfo(AssetManager.ResolveDirectory("atlas")).GetDirectories("skin_*"))
+            foreach (var modDir in ModManager.ActiveMods.Select(i => i.basePath))
             {
-                currentName = dir.Name.Replace("skin_", "");
-                foreach (var file in dir.GetFiles("*.txt"))
+                if(!Directory.Exists($"{modDir}/atlas"))
+                    continue;
+                foreach (var dir in new DirectoryInfo($"{modDir}/atlas").GetDirectories("skin_*"))
                 {
-                    try
+                    currentName = dir.Name.Replace("skin_", "");
+                    foreach (var file in dir.GetFiles("*.txt"))
                     {
-                        if (File.Exists(file.FullName.Replace("txt", "png")) ||
-                            File.Exists(file.FullName.Replace("txt", "PNG")))
+                        try
                         {
-                            Futile.atlasManager.LoadAtlas(Path.Combine("atlas", dir.Name, file.Name.Replace(".txt", "")));
-                            Plugin.Log("Custom Skin",$"Load {file} for ID:{currentName}");
+                            if (File.Exists(file.FullName.Replace("txt", "png")) ||
+                                File.Exists(file.FullName.Replace("txt", "PNG")))
+                            {
+                                Futile.atlasManager.LoadAtlas(Path.Combine("atlas", dir.Name,
+                                    file.Name.Replace(".txt", "")));
+                                Plugin.Log("Custom Skin", $"Load {file} for ID:{currentName}");
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            Debug.LogException(e);
+                            Plugin.LogError("Custom Skin", $"Try load atlas at:{file.FullName} failed!\n{e}");
                         }
                     }
-                    catch (Exception e)
-                    {
-                        Debug.LogException(e);
-                        Plugin.LogError("Custom Skin", $"Try load atlas at:{file.FullName} failed!\n{e}");
-                    }
-                }
 
-                customSkins.Add(new SlugcatStats.Name(currentName));
+                    customSkins.Add(new SlugcatStats.Name(currentName));
+                }
             }
 
             On.FAtlasManager.AddAtlas -= FAtlasManager_AddAtlas;

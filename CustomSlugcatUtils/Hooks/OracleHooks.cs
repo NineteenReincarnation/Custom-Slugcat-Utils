@@ -80,7 +80,7 @@ namespace CustomSlugcatUtils.Hooks
             {
                 if (waitCounter <= 0)
                 {
-                    if (OracleHooks.TryGetModule(owner, out var module))
+                    if (TryGetModule(owner, out var module))
                     {
                         owner.InitateConversation(PlaceHolder, this);
                         owner.conversation.LoadTextFromCustomFile(module.oracleData.folderPath,
@@ -96,6 +96,7 @@ namespace CustomSlugcatUtils.Hooks
                 return;
             }
 
+
             if (owner.conversation?.slatedForDeletion ?? true)
             {
                 Plugin.Log("Custom Oracle", "End Conv");
@@ -108,7 +109,7 @@ namespace CustomSlugcatUtils.Hooks
                         requestNewConv = true;
                         waitCounter = Mathf.RoundToInt(Random.Range(module.CurrentEvent.minWait, module.CurrentEvent.maxWait) * 40);
                     }
-                    else
+                    else if(!module.CurrentEvent.readPearl)
                     {
                         module.currentEventIndex++;
                         if (module.currentEventIndex == module.behaviorData.events.Length)
@@ -1224,5 +1225,8 @@ namespace CustomSlugcatUtils.Hooks
 
         [JsonProperty("MaxWait")]
         public float maxWait;
+
+        [JsonProperty("ReadPearl")]
+        public bool readPearl;
     }
 }

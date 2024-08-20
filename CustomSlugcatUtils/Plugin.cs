@@ -1,10 +1,12 @@
 ﻿using BepInEx;
 using System;
+using System.Linq;
 using CustomSlugcatUtils.Hooks;
 using UnityEngine;
 
 using System.Security.Permissions;
 using CustomSlugcatUtils.Tools;
+using Random = UnityEngine.Random;
 
 #pragma warning disable CS0618
 [assembly: SecurityPermission(SecurityAction.RequestMinimum, SkipVerification = true)]
@@ -12,11 +14,12 @@ using CustomSlugcatUtils.Tools;
 
 namespace CustomSlugcatUtils
 {
-    [BepInPlugin(ModId, "Custom Slugcat Utils", "1.0.0")]
+    [BepInPlugin(ModId, "Custom Slugcat Utils", Version)]
     public class Plugin : BaseUnityPlugin
     {
         public const string ModId = "CustomSlugcatUtils";
 
+        public const string Version = "0.1.0";
         public void OnEnable()
         {
             On.RainWorld.PostModsInit += RainWorld_PostModsInit;
@@ -25,6 +28,7 @@ namespace CustomSlugcatUtils
 
         private void RainWorld_OnModsInit(On.RainWorld.orig_OnModsInit orig, RainWorld self)
         {
+            Plugin.Log($"Mod Version:{Version}");
             try
             {
                 orig(self);
@@ -42,8 +46,10 @@ namespace CustomSlugcatUtils
                     SessionHooks.OnModsInit();
                     DevToolsHooks.OnModsInit();
                     CraftHooks.OnModsInit();
+                    CustomGrababilityHooks.OnModsInit();
                     CustomEdibleHooks.OnModInit();
                     OracleHooks.OnModsInit();
+                        
                     isLoaded = true;
 
                 }
@@ -56,6 +62,8 @@ namespace CustomSlugcatUtils
             }
         }
 
+
+    
         private void RainWorld_PostModsInit(On.RainWorld.orig_PostModsInit orig, RainWorld self)
         {
 
@@ -67,7 +75,7 @@ namespace CustomSlugcatUtils
                     ChatLogHooks.OnModsInit();
                     PlayerGraphicsHooks.OnModsInit();
                     CoopHooks.OnModsInit();
-
+                    
                     isPostLoaded = true;
                 }
             }
