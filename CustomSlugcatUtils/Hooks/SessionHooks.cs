@@ -22,16 +22,26 @@ namespace CustomSlugcatUtils.Hooks
 
         private static readonly GameFeature<string> OverseerSymbolCustom = new("guide_overseer_symbol_custom", JsonUtils.ToString);
 
+        private static readonly PlayerFeature<float> SpearDamage = new("spear_damage", JsonUtils.ToFloat);
 
         private static readonly GameFeature<RoomGuideData[]> StoryRoomInRegion = new("guide_room_in_region", (any) =>
         {
             var re = new List<RoomGuideData>();
             var list = any.AsList();
-            foreach (var item in list)
+            if (list.Get(0).TryString() is { } str)
             {
-                var obj = item.AsList();
-                re.Add(new RoomGuideData() { region = obj.GetString(0), room = obj.GetString(1)});
+                re.Add(new RoomGuideData() { region = str, room = list.GetString(1) });
+
             }
+            else
+            {
+                foreach (var item in list)
+                {
+                    var obj = item.AsList();
+                    re.Add(new RoomGuideData() { region = obj.GetString(0), room = obj.GetString(1) });
+                }
+            }
+     
             return re.ToArray();
         });
 
@@ -64,6 +74,15 @@ namespace CustomSlugcatUtils.Hooks
             On.OverseersWorldAI.DynamicGuideSymbolUpdate += OverseersWorldAI_DynamicGuideSymbolUpdate;
             On.OverseerHolograms.OverseerHologram.OverseerGuidanceSymbol += OverseerHologram_OverseerGuidanceSymbol;
 
+            On.Player.ThrownSpear += Player_ThrownSpear;
+
+        }
+
+        private static void Player_ThrownSpear(On.Player.orig_ThrownSpear orig, Player self, Spear spear)
+        {
+            orig(self,spear);
+            if (SpearDamage.TryGet(self, out var damage))
+                spear.spearDamageBonus = damage;
         }
 
         private static string OverseerHologram_OverseerGuidanceSymbol(On.OverseerHolograms.OverseerHologram.orig_OverseerGuidanceSymbol orig, int selector)

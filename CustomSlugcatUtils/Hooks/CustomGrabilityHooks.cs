@@ -23,9 +23,21 @@ namespace CustomSlugcatUtils.Hooks
         private static readonly PlayerFeature<CustomGrabability[]> CustomGrabability = new("custom_grabability", (any) =>
         {
             var re = new List<CustomGrabability>();
-            foreach (var item in any.AsList())
+            if (any.TryList() is { } list)
             {
-                var obj = item.AsObject();
+                foreach (var item in list)
+                {
+                    var obj = item.AsObject();
+                    re.Add(new CustomGrabability
+                    {
+                        grabability = JsonUtils.ToEnum<Player.ObjectGrabability>(obj.Get("grabability")),
+                        type = CustomEdibleHooks.ToCustomType(obj.Get("type"))
+                    });
+                }
+            }
+            else
+            {
+                var obj = any.AsObject();
                 re.Add(new CustomGrabability
                 {
                     grabability = JsonUtils.ToEnum<Player.ObjectGrabability>(obj.Get("grabability")),

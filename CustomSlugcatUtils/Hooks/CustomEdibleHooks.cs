@@ -27,28 +27,38 @@ namespace CustomSlugcatUtils.Hooks
             {
 
                 var re = new CustomEdibleData();
-                var list = json.AsList();
-                foreach (var data in list)
+                if (json.TryList() is { } list)
                 {
-                    if (data.TryObject() is { } obj)
-                    {
-                        if (obj.TryGet("type") is { } any)
-                        {
-                            float foodPoint = -2;
-                            if (obj.TryGet("food_point") is { } food && food.TryFloat() is { } toFood)
-                                foodPoint = toFood;
-                            re.edibleDatas.Add(new CustomEdibleData.FoodData(
-                                ToCustomType(any),
-                                Mathf.FloorToInt(foodPoint), Mathf.FloorToInt((foodPoint - Mathf.FloorToInt(foodPoint)) * 4)));
-                        }
-                        else if (obj.TryGet("forbiddenType") is { } any2)
-                        {
-                            re.edibleDatas.Add(new CustomEdibleData.FoodData(
-                                ToCustomType(any2), -1, -1));
-                        }
-                    }
+                    foreach (var data in list)
+                        AddEdibleData(data);
+                    
+                }
+                else
+                {
+                    AddEdibleData(json);
                 }
 
+                void AddEdibleData(JsonAny data)
+                {
+                    var obj = data.AsObject();
+
+                    if (obj.TryGet("type") is { } any)
+                    {
+                        float foodPoint = -2;
+                        if (obj.TryGet("food_point") is { } food && food.TryFloat() is { } toFood)
+                            foodPoint = toFood;
+                        re.edibleDatas.Add(new CustomEdibleData.FoodData(
+                            ToCustomType(any),
+                            Mathf.FloorToInt(foodPoint),
+                            Mathf.FloorToInt((foodPoint - Mathf.FloorToInt(foodPoint)) * 4)));
+                    }
+                    else if (obj.TryGet("forbiddenType") is { } any2)
+                    {
+                        re.edibleDatas.Add(new CustomEdibleData.FoodData(
+                            ToCustomType(any2), -1, -1));
+                    }
+
+                }
                 return re;
 
             });

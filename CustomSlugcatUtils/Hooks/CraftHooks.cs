@@ -24,30 +24,38 @@ namespace CustomSlugcatUtils.Hooks
         internal static readonly PlayerFeature<CraftData[]> CraftFeature = new("craft", (json) =>
         {
             List<CraftData> datas = new List<CraftData>();
-            var list = json.AsList();
 
-            foreach (var any in list)
+            if (json.TryList() is { } list)
+                foreach (var any in list)
+                    AddCraftItem(any);
+            else
+                AddCraftItem(json);
+
+            return datas.ToArray();
+
+
+            void AddCraftItem(JsonAny any)
             {
                 var craftData = new CraftData();
                 var obj = any.AsObject();
                 var items = obj.Get("craft_items");
                 if (items.TryList() is { } itemList)
                 {
-                    craftData.crafts.Add(ToCraftItemData(itemList.Get(0).AsObject()));
-                    if (itemList.Count >= 2)
-                        craftData.crafts.Add(ToCraftItemData(itemList.Get(1).AsObject()));
+                    craftData.crafts.Add(ToCraftItemData(itemList.Get(0)));
+                    if (itemList.Count == 2)
+                        craftData.crafts.Add(ToCraftItemData(itemList.Get(1)));
+                    else if (itemList.Count > 2)
+                        throw new ArgumentException("craft_items can not more than two");
                 }
                 else
-                    craftData.crafts.Add(ToCraftItemData(items.AsObject()));
-                
+                    craftData.crafts.Add(ToCraftItemData(items));
 
-                craftData.craftResult = ToCraftItemData(obj.Get("craft_result").AsObject());
+
+                craftData.craftResult = ToCraftItemData(obj.Get("craft_result"));
                 if (obj.TryGet("craft_cost") is { } cost)
                     craftData.costFood = JsonUtils.ToInt(cost);
                 datas.Add(craftData);
             }
-            return datas.ToArray();
-
         });
 
 
@@ -58,16 +66,22 @@ namespace CustomSlugcatUtils.Hooks
             public int costFood;
         }
 
-        private static IconSymbol.IconSymbolData ToCraftItemData(JsonObject json)
+        private static IconSymbol.IconSymbolData ToCraftItemData(JsonAny any)
         {
-            var re = new IconSymbol.IconSymbolData
+            if (any.TryObject() is { } json)
             {
-                critType = CreatureTemplate.Type.StandardGroundCreature,
-                itemType = JsonUtils.ToExtEnum<AbstractPhysicalObject.AbstractObjectType>(json.Get("type"))
-            };
-            if (json.TryGet("data") is { } data)
-                re.intData = data.AsInt();
-            return re;
+                var re = new IconSymbol.IconSymbolData
+                {
+                    critType = CreatureTemplate.Type.StandardGroundCreature,
+                    itemType = JsonUtils.ToExtEnum<AbstractPhysicalObject.AbstractObjectType>(json.Get("type"))
+                };
+                if (json.TryGet("data") is { } data)
+                    re.intData = data.AsInt();
+                return re;
+            }
+
+            return new IconSymbol.IconSymbolData(CreatureTemplate.Type.StandardGroundCreature,
+                JsonUtils.ToExtEnum<AbstractPhysicalObject.AbstractObjectType>(any),0);
         }
 
         public static void OnModsInit()
