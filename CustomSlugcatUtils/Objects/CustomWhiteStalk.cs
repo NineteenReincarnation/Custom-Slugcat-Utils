@@ -395,8 +395,7 @@ namespace CustomSlugcatUtils.Objects
         public Vector2 hoverPos;
 
         private CustomWhiteToken token;
-
-        public Vector2[,] stalk;
+        
 
         public Vector2 basePos;
 

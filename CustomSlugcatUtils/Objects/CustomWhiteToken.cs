@@ -166,12 +166,12 @@ namespace CustomSlugcatUtils.Objects
                             num3++;
                         }
                         room.PlaySound(SoundID.Token_Collected_Sparks, pos);
-                        if (anythingUnlocked && room.game.cameras[0].hud != null && room.game.cameras[0].hud.textPrompt != null)
-                        {
+                        //if (anythingUnlocked && room.game.cameras[0].hud != null && room.game.cameras[0].hud.textPrompt != null)
+                        //{
                             //TODO: UNLOCKED MESSAGE
-                            room.game.cameras[0].hud.textPrompt.AddMessage(room.game.manager.rainWorld.inGameTranslator.Translate("New arenas unlocked"), 20, 160, true, true);
+                        //    room.game.cameras[0].hud.textPrompt.AddMessage(room.game.manager.rainWorld.inGameTranslator.Translate("New arenas unlocked"), 20, 160, true, true);
                             
-                        }
+                        //}
                     }
                 }
             }
@@ -495,8 +495,7 @@ namespace CustomSlugcatUtils.Objects
         public bool locked;
 
         private int lockdownCounter;
-
-        public bool anythingUnlocked;
+        
 
         public class CollectTokenData : PlacedObject.ResizableObjectData
         {

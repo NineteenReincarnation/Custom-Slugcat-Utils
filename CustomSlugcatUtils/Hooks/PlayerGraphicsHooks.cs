@@ -30,6 +30,8 @@ namespace CustomSlugcatUtils.Hooks
             orig(self, manager, showRegionSpecificBkg);
             if (!postPostLoaded)
             {
+                CoopHooks.LoadAssets();
+
                 On.RoomCamera.SpriteLeaser.Update += SpriteLeaser_Update;
                 postPostLoaded = true;
                 Plugin.Log("Post-Skin Hooks Loaded");

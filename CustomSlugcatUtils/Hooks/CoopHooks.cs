@@ -7,17 +7,105 @@ using System.Text;
 using System.Threading.Tasks;
 using JollyCoop.JollyMenu;
 using Mono.Cecil.Cil;
+using On.JollyCoop.JollyHUD;
+using RWCustom;
+using SlugBase;
+using SlugBase.DataTypes;
+using SlugBase.Features;
+using UnityEngine;
+using JollyMeter = JollyCoop.JollyHUD.JollyMeter;
 
 namespace CustomSlugcatUtils.Hooks
 {
     internal static class CoopHooks
     {
+        private static readonly PlayerFeature<Color> OverrideIconColor = new("override_icon_color", JsonUtils.ToColor);
+        private static readonly PlayerFeature<Color> OverridePupColor = new("override_coop_color", JsonUtils.ToColor);
+
+        private static readonly string[] IconName = new[] { "_icon_kill", "_icon" };
+        
+        public static void LoadAssets()
+        {
+            foreach (var id in SlugcatStats.Name.values.entries)
+            {
+                foreach (var icon in IconName)
+                {
+                    if (File.Exists(AssetManager.ResolveFilePath($"atlas/{id}{icon}.png")) &&
+                        !Futile.atlasManager.DoesContainElementWithName($"atlas/{id}{icon}"))
+                    {
+                        Futile.atlasManager.LoadImage($"atlas/{id}{icon}");
+                        Plugin.Log($"Load icon: {id}{icon}");
+                    }
+                }
+            }
+        }
+        
         public static void OnModsInit()
         {
             IL.JollyCoop.JollyMenu.JollyPlayerSelector.ctor += JollyPlayerSelector_ctor;
             On.JollyCoop.JollyMenu.JollyPlayerSelector.GetPupButtonOffName += JollyPlayerSelector_GetPupButtonOffName;
+            On.JollyCoop.JollyMenu.JollyPlayerSelector.GrafUpdate += JollyPlayerSelector_GrafUpdate;
+
+            IL.Menu.FastTravelScreen.SpawnSlugcatButtons += FastTravelScreen_SpawnSlugcatButtons;
+            IL.Menu.MultiplayerMenu.PopulateSafariSlugcatButtons += MultiplayerMenu_PopulateSafariSlugcatButtons;
+            On.CreatureSymbol.SymbolDataFromCreature += CreatureSymbol_SymbolDataFromCreature;
+            On.CreatureSymbol.SpriteNameOfCreature += CreatureSymbol_SpriteNameOfCreature;      
+            On.JollyCoop.JollyHUD.JollyMeter.PlayerIcon.ctor += PlayerIcon_ctor;
+            IL.JollyCoop.JollyHUD.JollyMeter.PlayerIcon.Update += PlayerIcon_Update;
+            On.JollyCoop.JollyHUD.JollyPlayerSpecificHud.JollyDeathBump.ctor += JollyDeathBump_ctor;
 
         }
+
+        private static void PlayerIcon_Update(ILContext il)
+        {
+            try
+            {
+                ILCursor c = new ILCursor(il);
+                c.GotoNext(MoveType.After, i => i.MatchStfld<JollyMeter.PlayerIcon>("color"));
+                c.Emit(OpCodes.Ldarg_0);
+                c.EmitDelegate<Action<JollyMeter.PlayerIcon>>(self =>
+                {
+                    if (SlugBaseCharacter.TryGet(self.playerState.slugcatCharacter,
+                            out var character) && 
+                        OverrideIconColor.TryGet(character, out var icon))
+                        self.color = icon;
+                });
+
+                c.GotoNext(MoveType.After, i => i.MatchLdstr("Multiplayer_Death"));
+                c.Emit(OpCodes.Ldarg_0);
+                c.EmitDelegate<Func<string, JollyMeter.PlayerIcon, string>>((str, self) =>
+                {
+                    if (Futile.atlasManager.DoesContainElementWithName(
+                            $"atlas/{self.playerState.slugcatCharacter}_icon_kill"))
+                        return $"atlas/{self.playerState.slugcatCharacter}_icon_kill";
+                    return str;
+                });
+            }
+            catch (Exception e)
+            {
+                Debug.LogException(e);
+            }
+        }
+
+        private static void JollyDeathBump_ctor(JollyPlayerSpecificHud.JollyDeathBump.orig_ctor orig, JollyCoop.JollyHUD.JollyPlayerSpecificHud.JollyDeathBump self, JollyCoop.JollyHUD.JollyPlayerSpecificHud jollyhud)
+        {
+            orig(self, jollyhud);
+            if (Futile.atlasManager.DoesContainElementWithName(
+                    $"atlas/{(jollyhud.abstractPlayer.state as PlayerState).slugcatCharacter}_icon_kill"))
+            {
+                self.symbolSprite.element = Futile.atlasManager.GetElementWithName(
+                    $"atlas/{(jollyhud.abstractPlayer.state as PlayerState).slugcatCharacter}_icon_kill");
+                if (SlugBaseCharacter.TryGet((jollyhud.abstractPlayer.state as PlayerState).slugcatCharacter,
+                        out var character) && 
+                    OverrideIconColor.TryGet(character, out var icon))
+                    self.symbolSprite.color = icon;
+            }
+                
+        }
+
+
+  
+        
         private static void JollyPlayerSelector_ctor(ILContext il)
         {
             ILCursor c = new ILCursor(il);
@@ -34,7 +122,61 @@ namespace CustomSlugcatUtils.Hooks
             }
         }
 
-        private static string JollyPlayerSelector_GetPupButtonOffName(On.JollyCoop.JollyMenu.JollyPlayerSelector.orig_GetPupButtonOffName orig, JollyCoop.JollyMenu.JollyPlayerSelector self)
+        private static void JollyPlayerSelector_GrafUpdate(On.JollyCoop.JollyMenu.JollyPlayerSelector.orig_GrafUpdate orig, JollyCoop.JollyMenu.JollyPlayerSelector self, float timeStacker)
+        {
+            orig(self, timeStacker);
+            if (SlugBaseCharacter.TryGet(self.JollyOptions(self.index).playerClass ?? SlugcatStats.Name.White,out var character) &&
+                OverridePupColor.TryGet(character, out var icon))
+                self.pupButton.symbol.sprite.color = self.FadePortraitSprite(icon, timeStacker);
+
+        }
+        
+        private static void FastTravelScreen_SpawnSlugcatButtons(ILContext il)
+        {
+            ILCursor c = new ILCursor(il);
+            c.GotoNext(MoveType.After, i => i.MatchLdstr("Kill_Slugcat"));
+            var index = il.Body.Variables.First(i => i.VariableType.FullName.Contains("SlugcatStats")).Index;
+            c.Emit(OpCodes.Ldloc_S, (byte)index);
+            c.EmitDelegate<Func<string, SlugcatStats.Name, string>>((s, id) =>
+                Futile.atlasManager.DoesContainElementWithName($"atlas/{id}_icon") ? $"atlas/{id}_icon" : s);
+
+            c.GotoNext(MoveType.After, i => i.MatchCall<PlayerGraphics>("DefaultSlugcatColor"));
+            c.Emit(OpCodes.Ldloc_S, (byte)index);
+            c.EmitDelegate<Func<Color, SlugcatStats.Name, Color>>((s, name) =>
+                SlugBaseCharacter.TryGet(name , out var character) && 
+                OverrideIconColor.TryGet(character, out var icon) 
+                ? icon : s);
+        }
+        
+        private static void PlayerIcon_ctor(On.JollyCoop.JollyHUD.JollyMeter.PlayerIcon.orig_ctor orig, JollyCoop.JollyHUD.JollyMeter.PlayerIcon self, JollyCoop.JollyHUD.JollyMeter meter, AbstractCreature associatedPlayer, Color color)
+        {
+            if (associatedPlayer.state is PlayerState state1 && SlugBaseCharacter.TryGet(state1.slugcatCharacter, out var character) &&
+                OverrideIconColor.TryGet(character, out var col))
+                color = col;
+            
+            orig(self, meter, associatedPlayer, color);
+            if (associatedPlayer.state is PlayerState state &&
+                Futile.atlasManager.DoesContainElementWithName($"atlas/{state.slugcatCharacter}_icon"))
+            {
+                self.iconSprite.element =
+                    Futile.atlasManager.GetElementWithName($"atlas/{state.slugcatCharacter}_icon");
+         
+            }
+        }
+
+        private static void MultiplayerMenu_PopulateSafariSlugcatButtons(ILContext il)
+        {
+            ILCursor c = new ILCursor(il);
+            c.GotoNext(MoveType.After, i => i.MatchLdstr("Kill_Slugcat"));
+            var index = il.Body.Variables.First(i => i.VariableType.FullName.Contains("SlugcatStats")).Index;
+            c.Emit(OpCodes.Ldloc_S, (byte)index);
+            c.EmitDelegate<Func<string, SlugcatStats.Name, string>>((s, id) =>
+                Futile.atlasManager.DoesContainElementWithName($"atlas/{id}_icon") ? $"atlas/{id}_icon" : s);
+        }
+
+        private static string JollyPlayerSelector_GetPupButtonOffName(
+            On.JollyCoop.JollyMenu.JollyPlayerSelector.orig_GetPupButtonOffName orig,
+            JollyCoop.JollyMenu.JollyPlayerSelector self)
         {
             var re = orig(self);
             var id = (self.JollyOptions(self.index).playerClass ?? SlugcatStats.Name.White).value;
@@ -45,6 +187,20 @@ namespace CustomSlugcatUtils.Hooks
                     : "pup_on";
             return File.Exists(AssetManager.ResolveFilePath($"Illustrations/{id}_off.png")) ? $"{id}_off" : re;
 
+
+        }
+        private static string CreatureSymbol_SpriteNameOfCreature(On.CreatureSymbol.orig_SpriteNameOfCreature orig, IconSymbol.IconSymbolData iconData)
+        {
+            if (iconData.intData == -1 && iconData.critType != null && iconData.critType.value.StartsWith("CSU_atlas"))
+                return iconData.critType.value.Replace("CSU_","");
+            return orig(iconData);
+        }
+
+        private static IconSymbol.IconSymbolData CreatureSymbol_SymbolDataFromCreature(On.CreatureSymbol.orig_SymbolDataFromCreature orig, AbstractCreature creature)
+        {
+            if (creature.state is PlayerState state && Futile.atlasManager.DoesContainElementWithName($"atlas/{state.slugcatCharacter}_icon"))
+                return new IconSymbol.IconSymbolData(new CreatureTemplate.Type($"CSU_atlas/{state.slugcatCharacter}_icon"), AbstractPhysicalObject.AbstractObjectType.Creature, -1);
+            return orig(creature);
         }
     }
 }
