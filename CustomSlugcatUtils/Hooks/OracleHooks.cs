@@ -167,7 +167,7 @@ namespace CustomSlugcatUtils.Hooks
             Plugin.Log("Custom Oracle", $"Load custom text: {fileName}, randomStart: {randomStartPos != null && index == -1}{(index != -1 ? $", index: {index}" : "")}");
             if (fileName == null)
                 return;
-            var path = $"text/oracle/{folderName}/text_{LocalizationTranslator.LangShort(conversation.interfaceOwner.rainWorld.inGameTranslator.currentLanguage)}/{fileName}.txt";
+            var path = $"text/oracle/{folderName}/text_{LocalizationTranslator.LangShort(Custom.rainWorld.inGameTranslator.currentLanguage)}/{fileName}.txt";
             if (!File.Exists(AssetManager.ResolveFilePath(path)))
                 path = $"text/oracle/{folderName}/text_{LocalizationTranslator.LangShort(InGameTranslator.LanguageID.English)}/{fileName}.txt";
             if (!File.Exists(AssetManager.ResolveFilePath(path)))
@@ -181,7 +181,7 @@ namespace CustomSlugcatUtils.Hooks
                 .Select(i => i.Substring(0, i.IndexOf("//") == -1 ? i.Length : i.IndexOf("//"))).
                 Where(i => !string.IsNullOrWhiteSpace(i)).ToArray();
 
-            var igt = conversation.interfaceOwner.rainWorld.inGameTranslator;
+            var igt = Custom.rainWorld.inGameTranslator;
 
             if (randomStartPos == null)
             {

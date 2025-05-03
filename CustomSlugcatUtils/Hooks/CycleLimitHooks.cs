@@ -98,7 +98,7 @@ namespace CustomSlugcatUtils.Hooks
             c.Emit(OpCodes.Stloc_0);
         }
 
-        private static void RainWorldGame_Win(On.RainWorldGame.orig_Win orig, RainWorldGame self, bool malnourished)
+        private static void RainWorldGame_Win(On.RainWorldGame.orig_Win orig, RainWorldGame self, bool malnourished, bool fromWarpPoint)
         {
             if (CycleLimit.TryGet(self,out var cycleLimit) &&
                 self.session is StoryGameSession session)
@@ -109,7 +109,7 @@ namespace CustomSlugcatUtils.Hooks
                     return;
                 }
             }
-            orig(self, malnourished);
+            orig(self, malnourished,fromWarpPoint);
 
         }
 
