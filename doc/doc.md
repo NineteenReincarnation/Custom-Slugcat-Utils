@@ -187,6 +187,8 @@ If set to true, the save file will be locked after ascension, and it will not be
 
 The crafting operation is the same as the one for **Gourmand**.
 
+`"can_craft_single"`: Enable single item crafting (optional)
+
 `"craft_items"`：Write the crafting method for an item
 
 `"type"`：Item type.
@@ -202,6 +204,7 @@ The crafting operation is the same as the one for **Gourmand**.
 ```json5
 "craft": [
 	{
+		"can_craft_single": <bool>, //optional
 		"craft_items": [
 			{
 				"type": <AbstractPhysicalObject.Type>,
@@ -223,6 +226,7 @@ The crafting operation is the same as the one for **Gourmand**.
 //  spear + rock + one food point ==> singularity bomb
 "craft": [
 	{
+		"can_craft_single": true,
 		"craft_items": [
 			{
 				"type": "Spear",

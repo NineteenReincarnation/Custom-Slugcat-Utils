@@ -17,7 +17,7 @@ namespace CustomSlugcatUtils
     [BepInPlugin(ModId, "Custom Slugcat Utils", Version)]
     public class Plugin : BaseUnityPlugin
     {
-        public const string ModId = "CustomSlugcatUtils";
+        public const string ModId = "customslugcatutils";
 
         public const string Version = "1.0.0";
         public void OnEnable()

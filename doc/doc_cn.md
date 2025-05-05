@@ -188,6 +188,8 @@
 
 合成操作同饕餮一致
 
+`"can_craft_single"`:可以单物品合成（默认不可以）
+
 `"craft_items"`：下写一个物品的合成方式
 
 `"type"`：物品类型
@@ -204,6 +206,7 @@
 ```json5
 "craft": [
 	{
+		"can_craft_single": <bool>, //可选
 		"craft_items": [
 			{
 				"type": <AbstractPhysicalObject.Type>,
@@ -226,6 +229,7 @@
 //  矛 + 石头 + 一饱食度 ==> 奇点炸弹
 "craft": [
 	{
+		"can_craft_single": true,
 		"craft_items": [
 			{
 				"type": "Spear",
